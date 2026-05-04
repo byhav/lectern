@@ -87,7 +87,7 @@ export default function AdminPage() {
   }
 
   // Set target active first (no "no active" window for participants),
-  // then clear all others. Two updates because the client library has no transactions.
+  // then clear all others.
   async function setActive(id: string) {
     await supabase.from('activities').update({ is_active: true }).eq('id', id)
     await supabase.from('activities').update({ is_active: false }).neq('id', id)
@@ -138,8 +138,8 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-lectern-slate/40">Loading…</p>
       </div>
     )
   }
@@ -147,7 +147,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-zinc-900 mb-6">Activity Admin</h1>
+        <h1 className="text-2xl font-bold text-lectern-slate mb-6">Activity Admin</h1>
 
         <div className="flex gap-3 mb-6">
           <input
@@ -155,20 +155,20 @@ export default function AdminPage() {
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && createActivity()}
-            placeholder="Enter activity prompt..."
-            className="flex-1 border border-zinc-300 rounded px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+            placeholder="Enter activity prompt…"
+            className="flex-1 border border-lectern-slate/20 rounded-lg px-3 py-2 text-lectern-slate placeholder-lectern-slate/40 focus:outline-none focus:ring-2 focus:ring-lectern-coral/50"
           />
           <button
             onClick={createActivity}
             disabled={creating || !newTitle.trim()}
-            className="px-4 py-2 bg-zinc-800 text-white rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-lectern-slate text-white rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            {creating ? 'Creating...' : 'Create Activity'}
+            {creating ? 'Creating…' : 'Create Activity'}
           </button>
           {hasActive && (
             <button
               onClick={pauseAll}
-              className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+              className="px-4 py-2 bg-lectern-orange text-white rounded-lg hover:opacity-90 transition-opacity"
             >
               Pause
             </button>
@@ -176,25 +176,29 @@ export default function AdminPage() {
         </div>
 
         {activities.length === 0 ? (
-          <p className="text-zinc-400">No activities yet.</p>
+          <p className="text-lectern-slate/40">No activities yet.</p>
         ) : (
-          <div className="border border-zinc-200 rounded overflow-hidden">
+          <div className="border border-lectern-slate/10 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 text-zinc-500 text-left">
+              <thead className="bg-lectern-slate/5 text-lectern-slate/60 text-left">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Title</th>
-                  <th className="px-4 py-2 font-medium">Created</th>
-                  <th className="px-4 py-2 font-medium">Responses</th>
-                  <th className="px-4 py-2 font-medium">Actions</th>
+                  <th className="px-4 py-2.5 font-medium">Title</th>
+                  <th className="px-4 py-2.5 font-medium">Created</th>
+                  <th className="px-4 py-2.5 font-medium">Responses</th>
+                  <th className="px-4 py-2.5 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-lectern-slate/8">
                 {activities.map((activity) => (
-                  <tr key={activity.id} className={activity.is_active ? 'bg-green-50' : ''}>
+                  <tr
+                    key={activity.id}
+                    className={activity.is_active ? 'bg-lectern-coral/8' : ''}
+                  >
                     <td className="px-4 py-3 max-w-xs">
                       <div className="flex items-center gap-2">
                         {activity.is_active && (
-                          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          <span className="shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-lectern-coral text-white">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-live-pulse" />
                             Live
                           </span>
                         )}
@@ -209,11 +213,11 @@ export default function AdminPage() {
                               if (e.key === 'Escape') cancelEdit()
                             }}
                             onBlur={() => saveTitle(activity.id, editingTitle)}
-                            className="border border-zinc-300 rounded px-2 py-1 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 w-full min-w-0"
+                            className="border border-lectern-slate/20 rounded px-2 py-1 text-lectern-slate focus:outline-none focus:ring-2 focus:ring-lectern-coral/50 w-full min-w-0"
                           />
                         ) : (
                           <span
-                            className="cursor-pointer hover:underline text-zinc-900"
+                            className="cursor-pointer hover:underline text-lectern-slate"
                             onClick={() => startEdit(activity)}
                             title="Click to edit"
                           >
@@ -222,10 +226,10 @@ export default function AdminPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-zinc-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-lectern-slate/50 whitespace-nowrap">
                       {new Date(activity.created_at).toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 text-zinc-700 tabular-nums">
+                    <td className="px-4 py-3 text-lectern-slate tabular-nums font-medium">
                       {activity.responseCount}
                     </td>
                     <td className="px-4 py-3">
@@ -233,20 +237,20 @@ export default function AdminPage() {
                         {!activity.is_active && (
                           <button
                             onClick={() => setActive(activity.id)}
-                            className="px-2 py-1 text-xs bg-zinc-800 text-white rounded hover:bg-zinc-700"
+                            className="px-2 py-1 text-xs bg-lectern-slate text-white rounded hover:opacity-80 transition-opacity"
                           >
                             Set Active
                           </button>
                         )}
                         <button
                           onClick={() => clearResponses(activity.id)}
-                          className="px-2 py-1 text-xs border border-zinc-300 text-zinc-600 rounded hover:bg-zinc-50"
+                          className="px-2 py-1 text-xs border border-lectern-slate/20 text-lectern-slate/60 rounded hover:bg-lectern-slate/5 transition-colors"
                         >
                           Clear responses
                         </button>
                         <button
                           onClick={() => deleteActivity(activity.id)}
-                          className="px-2 py-1 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50"
+                          className="px-2 py-1 text-xs border border-lectern-coral/30 text-lectern-coral rounded hover:bg-lectern-coral/8 transition-colors"
                         >
                           Delete
                         </button>

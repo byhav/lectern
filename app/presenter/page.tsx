@@ -17,20 +17,44 @@ type Response = {
   content: string
 }
 
+const NOTE_BG = [
+  'rgb(255 211 91 / 0.4)',   // sand  #ffd35b  40%
+  'rgb(168 232 249 / 1)',    // teal  #a8e8f9  100%
+  'rgb(245 162 1 / 0.4)',    // orange #f5a201 40%
+  'rgb(168 232 249 / 0.4)',  // teal  #a8e8f9  30%
+]
+
+function noteBg(index: number): string {
+  return NOTE_BG[index % 4]
+}
+
 export default function PresenterPage() {
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined)
   const [responses, setResponses] = useState<Response[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [participantUrl, setParticipantUrl] = useState('')
+  const [animatingIds, setAnimatingIds] = useState(new Set<string>())
   const seenIds = useRef(new Set<string>())
+  const initialLoadDone = useRef(false)
 
-  function prependUnseen(incoming: Response[]) {
+  function addAnimating(ids: string[]) {
+    setAnimatingIds((prev) => new Set([...prev, ...ids]))
+    setTimeout(() => {
+      setAnimatingIds((prev) => {
+        const next = new Set(prev)
+        ids.forEach((id) => next.delete(id))
+        return next
+      })
+    }, 500)
+  }
+
+  function prependUnseen(incoming: Response[], animate = false) {
     const unseen = incoming.filter((r) => !seenIds.current.has(r.id))
     unseen.forEach((r) => seenIds.current.add(r.id))
-    if (unseen.length > 0) {
-      setResponses((prev) => [...unseen, ...prev])
-    }
+    if (unseen.length === 0) return
+    if (animate) addAnimating(unseen.map((r) => r.id))
+    setResponses((prev) => [...unseen, ...prev])
   }
 
   async function fetchActiveActivity(): Promise<Activity | null> {
@@ -55,7 +79,7 @@ export default function PresenterPage() {
       .eq('activity_id', activityId)
       .order('created_at', { ascending: false })
 
-    if (data) prependUnseen(data)
+    if (data) prependUnseen(data, false)
   }
 
   useEffect(() => {
@@ -66,6 +90,7 @@ export default function PresenterPage() {
     async function init() {
       const act = await fetchActiveActivity()
       if (act) await fetchResponses(act.id)
+      initialLoadDone.current = true
       setLoading(false)
     }
     init()
@@ -88,7 +113,7 @@ export default function PresenterPage() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'responses' },
         (payload) => {
-          prependUnseen([payload.new as Response])
+          prependUnseen([payload.new as Response], initialLoadDone.current)
         }
       )
       .subscribe()
@@ -101,50 +126,64 @@ export default function PresenterPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-lectern-slate/40">Loading…</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500">{error}</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-lectern-coral font-medium">{error}</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-8">
+    <div className="min-h-screen bg-white p-10 pb-40">
       {participantUrl && (
-        <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-lg p-4 flex flex-col items-center gap-2">
-          <QRCodeSVG value={participantUrl} size={250} level="M" />
-          <p className="text-xs font-mono text-zinc-500">{participantUrl}</p>
+        <div className="fixed bottom-6 right-6 bg-white rounded-2xl shadow-xl p-5 flex flex-col items-center gap-3 border border-lectern-slate/10">
+          <QRCodeSVG value={participantUrl} size={220} level="M" />
+          <p className="text-xs font-mono text-lectern-slate/50 text-center break-all max-w-[220px]">
+            {participantUrl}
+          </p>
         </div>
       )}
+
       <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="w-3 h-3 rounded-full bg-lectern-coral animate-live-pulse shrink-0" />
+            <span className="text-lectern-teal font-semibold text-xl tabular-nums">
+              {responses.length} {responses.length === 1 ? 'response' : 'responses'}
+            </span>
+          </div>
           {activity ? (
-            <h1 className="text-3xl font-bold text-zinc-900">{activity.title}</h1>
+            <h1 className="text-6xl font-bold text-lectern-slate leading-tight">
+              {activity.title}
+            </h1>
           ) : (
-            <h1 className="text-3xl font-bold text-zinc-400">No active activity</h1>
+            <h1 className="text-6xl font-bold text-lectern-slate/30 leading-tight">
+              No active activity
+            </h1>
           )}
-          <p className="text-zinc-500 mt-1 text-sm">
-            {responses.length} {responses.length === 1 ? 'response' : 'responses'}
-          </p>
         </div>
 
         {responses.length === 0 ? (
-          <p className="text-zinc-400 text-center py-16">No responses yet.</p>
+          <p className="text-lectern-slate/25 text-center py-20 text-2xl">No responses yet.</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {responses.map((response) => (
+          <div className="grid grid-cols-3 gap-5 items-start">
+            {responses.map((response, i) => (
               <div
                 key={response.id}
-                className="bg-yellow-100 border border-yellow-200 rounded-lg p-4 shadow-sm"
+                style={{ backgroundColor: noteBg(i) }}
+                className={[
+                  'rounded-xl p-3 shadow-sm',
+                  animatingIds.has(response.id) ? 'animate-slide-in' : '',
+                ].join(' ')}
               >
-                <p className="text-zinc-800 text-sm leading-relaxed">{response.content}</p>
+                <p className="text-lectern-slate text-xl leading-snug">{response.content}</p>
               </div>
             ))}
           </div>

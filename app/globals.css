@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #013c58;
 }
 
 @theme inline {
@@ -12,15 +12,113 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.65;
+}
+
+/* ─── Lectern palette utilities ──────────────────────────────────────────────
+   Palette:
+     slate  #013c58  dark blue
+     sand   #ffd35b  light orange
+     coral  #ffba42  medium orange
+     teal   #a8e8f9  light blue
+     sage   #00537a  medium blue
+     orange #f5a201  dark orange
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@layer utilities {
+
+  /* Animations */
+  .animate-slide-in   { animation: slide-in 0.35s ease-out; }
+  .animate-live-pulse { animation: live-pulse 1.5s ease-in-out infinite; }
+
+  /* Background — solid */
+  .bg-lectern-slate  { background-color: #013c58; }
+  .bg-lectern-sand   { background-color: #ffd35b; }
+  .bg-lectern-coral  { background-color: #ffba42; }
+  .bg-lectern-teal   { background-color: #a8e8f9; }
+  .bg-lectern-sage   { background-color: #00537a; }
+  .bg-lectern-orange { background-color: #f5a201; }
+
+  /* Background — with opacity */
+  .bg-lectern-sand\/95   { background-color: rgb(255 211 91 / 0.95); }
+  .bg-lectern-sand\/75   { background-color: rgb(255 211 91 / 0.75); }
+  .bg-lectern-sand\/55   { background-color: rgb(255 211 91 / 0.55); }
+  .bg-lectern-orange\/85 { background-color: rgb(245 162 1 / 0.85); }
+  .bg-lectern-orange\/80 { background-color: rgb(245 162 1 / 0.80); }
+  .bg-lectern-orange\/70 { background-color: rgb(245 162 1 / 0.70); }
+  .bg-lectern-sage\/55   { background-color: rgb(0 83 122 / 0.55); }
+  .bg-lectern-sage\/50   { background-color: rgb(0 83 122 / 0.50); }
+  .bg-lectern-teal\/10   { background-color: rgb(168 232 249 / 0.10); }
+  .bg-lectern-coral\/10  { background-color: rgb(255 186 66 / 0.10); }
+  .bg-lectern-coral\/8   { background-color: rgb(255 186 66 / 0.08); }
+  .bg-lectern-slate\/8   { background-color: rgb(1 60 88 / 0.08); }
+  .bg-lectern-slate\/5   { background-color: rgb(1 60 88 / 0.05); }
+
+  /* Text — solid */
+  .text-lectern-slate  { color: #013c58; }
+  .text-lectern-coral  { color: #ffba42; }
+  .text-lectern-teal   { color: #a8e8f9; }
+  .text-lectern-orange { color: #f5a201; }
+
+  /* Text — with opacity */
+  .text-lectern-slate\/70 { color: rgb(1 60 88 / 0.70); }
+  .text-lectern-slate\/60 { color: rgb(1 60 88 / 0.60); }
+  .text-lectern-slate\/50 { color: rgb(1 60 88 / 0.50); }
+  .text-lectern-slate\/40 { color: rgb(1 60 88 / 0.40); }
+  .text-lectern-slate\/35 { color: rgb(1 60 88 / 0.35); }
+  .text-lectern-slate\/30 { color: rgb(1 60 88 / 0.30); }
+  .text-lectern-slate\/25 { color: rgb(1 60 88 / 0.25); }
+  .text-lectern-coral\/50 { color: rgb(255 186 66 / 0.50); }
+  .text-lectern-teal\/60  { color: rgb(168 232 249 / 0.60); }
+
+  /* Placeholder */
+  .placeholder-lectern-slate\/40::placeholder { color: rgb(1 60 88 / 0.40); }
+
+  /* Border — solid */
+  .border-lectern-slate { border-color: #013c58; }
+  .border-lectern-teal  { border-color: #a8e8f9; }
+  .border-lectern-coral { border-color: #ffba42; }
+
+  /* Border — with opacity */
+  .border-lectern-slate\/20 { border-color: rgb(1 60 88 / 0.20); }
+  .border-lectern-slate\/10 { border-color: rgb(1 60 88 / 0.10); }
+  .border-lectern-coral\/30 { border-color: rgb(255 186 66 / 0.30); }
+
+  /* Divide */
+  .divide-lectern-slate\/8 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgb(1 60 88 / 0.08);
+  }
+
+  /* Ring color (used with ring-2 etc.) */
+  .ring-lectern-coral\/50 { --tw-ring-color: rgb(255 186 66 / 0.50); }
+
+  /* Focus variants */
+  .focus\:border-lectern-coral:focus   { border-color: #ffba42; }
+  .focus\:ring-lectern-coral\/50:focus { --tw-ring-color: rgb(255 186 66 / 0.50); }
+
+  /* Opacity */
+  .opacity-50 { opacity: 0.5; }
+
+  /* Hover variants */
+  .hover\:bg-lectern-teal\/10:hover  { background-color: rgb(168 232 249 / 0.10); }
+  .hover\:bg-lectern-slate\/5:hover  { background-color: rgb(1 60 88 / 0.05); }
+  .hover\:bg-lectern-coral\/8:hover  { background-color: rgb(255 186 66 / 0.08); }
 }

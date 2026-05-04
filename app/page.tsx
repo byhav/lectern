@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type Activity = {
@@ -74,26 +75,26 @@ export default function ParticipantPage() {
 
   if (state.status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
+      <div className="min-h-screen bg-lectern-sand flex items-center justify-center">
+        <p className="text-lectern-slate/50">Loading…</p>
       </div>
     )
   }
 
   if (state.status === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500">{state.message}</p>
+      <div className="min-h-screen bg-lectern-sand flex items-center justify-center px-4">
+        <p className="text-lectern-coral font-medium">{state.message}</p>
       </div>
     )
   }
 
   if (state.status === 'waiting') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-lectern-sand flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-2xl font-semibold text-zinc-700">Waiting for an activity...</p>
-          <p className="text-zinc-400 mt-2">Check back soon.</p>
+          <p className="text-2xl font-semibold text-lectern-slate">Waiting for an activity…</p>
+          <p className="text-lectern-slate/60 mt-2 text-lg">Check back soon.</p>
         </div>
       </div>
     )
@@ -101,41 +102,64 @@ export default function ParticipantPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-2xl font-semibold text-zinc-700">Thanks for your response!</p>
-          <button
-            onClick={() => setSubmitted(false)}
-            className="mt-6 px-6 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
-          >
-            Submit another response
-          </button>
+      <div className="min-h-screen bg-lectern-sand flex items-center justify-center px-4">
+        <div className="text-center max-w-sm w-full">
+          <div className="w-20 h-20 rounded-full bg-lectern-teal flex items-center justify-center mx-auto mb-6">
+            <span className="text-white text-3xl font-bold">✓</span>
+          </div>
+          <h2 className="text-3xl font-bold text-lectern-slate mb-2">Response received</h2>
+          <p className="text-lectern-slate/60 mb-8 text-lg">Thanks for contributing.</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setSubmitted(false)}
+              className="w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-lg hover:opacity-90 transition-opacity"
+            >
+              Submit another response
+            </button>
+            <Link
+              href="/wall"
+              className="w-full py-4 border-2 border-lectern-teal text-lectern-teal font-semibold rounded-xl text-lg text-center hover:bg-lectern-teal/10 transition-colors"
+            >
+              View the wall →
+            </Link>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen bg-lectern-sand flex items-center justify-center px-4">
       <div className="w-full max-w-lg">
-        <h1 className="text-3xl font-bold text-zinc-900 mb-8">{state.activity.title}</h1>
+        <h1 className="text-4xl font-bold text-lectern-slate mb-8 leading-tight">
+          {state.activity.title}
+        </h1>
         {submitError && (
-          <p className="text-red-500 text-sm mb-4">{submitError}</p>
+          <p className="text-lectern-coral font-medium mb-4">{submitError}</p>
         )}
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your response..."
-          rows={4}
-          className="w-full border border-zinc-300 rounded-lg px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400 resize-none"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
+          }}
+          placeholder="Type your response…"
+          rows={5}
+          className="w-full border-2 border-lectern-slate/20 rounded-xl px-4 py-3 text-lectern-slate placeholder-lectern-slate/40 focus:outline-none focus:border-lectern-coral bg-white/70 resize-none text-lg"
         />
         <button
           onClick={handleSubmit}
           disabled={submitting || !input.trim()}
-          className="mt-4 w-full py-3 bg-zinc-800 text-white font-medium rounded-lg hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="mt-4 w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
-          {submitting ? 'Submitting...' : 'Submit'}
+          {submitting ? 'Submitting…' : 'Submit'}
         </button>
+        <Link
+          href="/wall"
+          className="mt-5 block text-center text-lectern-slate/50 hover:text-lectern-slate transition-colors text-sm"
+        >
+          View the wall →
+        </Link>
       </div>
     </div>
   )
