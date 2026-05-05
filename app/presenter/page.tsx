@@ -209,13 +209,13 @@ export default function PresenterPage() {
         {responses.length === 0 ? (
           <p className="text-lectern-slate/25 text-center py-20 text-2xl">No responses yet.</p>
         ) : (
-          <div className="grid grid-cols-3 gap-5 items-start">
+          <div className="columns-3 gap-5">
             {responses.map((response, i) => (
               <div
                 key={response.id}
                 style={{ backgroundColor: noteBg(i) }}
                 className={[
-                  'rounded-xl p-3 shadow-sm',
+                  'rounded-xl p-3 mb-5 shadow-sm break-inside-avoid',
                   animatingIds.has(response.id) ? 'animate-slide-in' : '',
                 ].join(' ')}
               >

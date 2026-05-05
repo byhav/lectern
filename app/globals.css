@@ -76,6 +76,7 @@ body {
   .text-lectern-slate  { color: #013c58; }
   .text-lectern-coral  { color: #ffba42; }
   .text-lectern-teal   { color: #a8e8f9; }
+  .text-lectern-sage   { color: #00537a; }
   .text-lectern-orange { color: #f5a201; }
 
   /* Text — with opacity */
@@ -95,6 +96,7 @@ body {
   /* Border — solid */
   .border-lectern-slate { border-color: #013c58; }
   .border-lectern-teal  { border-color: #a8e8f9; }
+  .border-lectern-sage  { border-color: #00537a; }
   .border-lectern-coral { border-color: #ffba42; }
 
   /* Border — with opacity */
@@ -119,6 +121,7 @@ body {
 
   /* Hover variants */
   .hover\:bg-lectern-teal\/10:hover  { background-color: rgb(168 232 249 / 0.10); }
+  .hover\:bg-lectern-sage\/10:hover  { background-color: rgb(0 83 122 / 0.10); }
   .hover\:bg-lectern-slate\/5:hover  { background-color: rgb(1 60 88 / 0.05); }
   .hover\:bg-lectern-coral\/8:hover  { background-color: rgb(255 186 66 / 0.08); }
 }

@@ -141,7 +141,7 @@ export default function ParticipantPage() {
             </button>
             <Link
               href="/wall"
-              className="w-full py-4 border-2 border-lectern-teal text-lectern-teal font-semibold rounded-xl text-lg text-center hover:bg-lectern-teal/10 transition-colors"
+              className="w-full py-4 border-2 border-lectern-sage text-lectern-sage font-semibold rounded-xl text-lg text-center hover:bg-lectern-sage/10 transition-colors"
             >
               View the wall →
             </Link>
