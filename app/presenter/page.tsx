@@ -35,8 +35,27 @@ export default function PresenterPage() {
   const [error, setError] = useState<string | null>(null)
   const [participantUrl, setParticipantUrl] = useState('')
   const [animatingIds, setAnimatingIds] = useState(new Set<string>())
+  const [connectionMode, setConnectionMode] = useState<'realtime' | 'polling'>('realtime')
   const seenIds = useRef(new Set<string>())
   const initialLoadDone = useRef(false)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const activityIdRef = useRef<string | null>(null)
+
+  function startPolling() {
+    if (pollingRef.current) return
+    setConnectionMode('polling')
+    pollingRef.current = setInterval(() => {
+      if (activityIdRef.current) fetchResponses(activityIdRef.current)
+    }, 4000)
+  }
+
+  function stopPolling() {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+    setConnectionMode('realtime')
+  }
 
   function addAnimating(ids: string[]) {
     setAnimatingIds((prev) => new Set([...prev, ...ids]))
@@ -69,6 +88,7 @@ export default function PresenterPage() {
       return null
     }
     setActivity(data ?? null)
+    activityIdRef.current = data?.id ?? null
     return data
   }
 
@@ -116,11 +136,22 @@ export default function PresenterPage() {
           prependUnseen([payload.new as Response], initialLoadDone.current)
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          stopPolling()
+        } else if (
+          status === 'TIMED_OUT' ||
+          status === 'CLOSED' ||
+          status === 'CHANNEL_ERROR'
+        ) {
+          startPolling()
+        }
+      })
 
     return () => {
       supabase.removeChannel(activitiesChannel)
       supabase.removeChannel(responsesChannel)
+      if (pollingRef.current) clearInterval(pollingRef.current)
     }
   }, [])
 
@@ -158,6 +189,11 @@ export default function PresenterPage() {
             <span className="text-lectern-teal font-semibold text-xl tabular-nums">
               {responses.length} {responses.length === 1 ? 'response' : 'responses'}
             </span>
+            {connectionMode === 'realtime' ? (
+              <span className="text-xs font-medium text-emerald-500">● realtime</span>
+            ) : (
+              <span className="text-xs font-medium text-amber-400 animate-pulse">⟳ polling</span>
+            )}
           </div>
           {activity ? (
             <h1 className="text-6xl font-bold text-lectern-slate leading-tight">

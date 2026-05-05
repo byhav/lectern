@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
@@ -16,12 +16,18 @@ type PageState =
   | { status: 'waiting' }
   | { status: 'active'; activity: Activity }
 
+const CHAR_LIMIT = 500
+const NEAR_LIMIT = 50
+
 export default function ParticipantPage() {
   const [state, setState] = useState<PageState>({ status: 'loading' })
   const [input, setInput] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [showSlowWarning, setShowSlowWarning] = useState(false)
+  const lastSubmitRef = useRef<number>(0)
+  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function fetchActiveActivity() {
     const { data, error } = await supabase
@@ -58,19 +64,36 @@ export default function ParticipantPage() {
   }, [])
 
   async function handleSubmit() {
-    if (state.status !== 'active' || !input.trim()) return
+    if (state.status !== 'active' || !input.trim() || input.length > CHAR_LIMIT) return
+
+    if (Date.now() - lastSubmitRef.current < 2000) return
+    lastSubmitRef.current = Date.now()
+
     setSubmitting(true)
     setSubmitError(null)
-    const { error } = await supabase
-      .from('responses')
-      .insert({ activity_id: state.activity.id, content: input.trim() })
-    setSubmitting(false)
-    if (error) {
-      setSubmitError('Failed to submit. Please try again.')
-      return
+    setShowSlowWarning(false)
+
+    slowTimerRef.current = setTimeout(() => setShowSlowWarning(true), 5000)
+
+    try {
+      const { error } = await supabase
+        .from('responses')
+        .insert({ activity_id: state.activity.id, content: input.trim() })
+
+      if (error) throw error
+
+      setSubmitted(true)
+      setInput('')
+    } catch {
+      setSubmitError('Submission failed. Please try again.')
+    } finally {
+      setSubmitting(false)
+      if (slowTimerRef.current) {
+        clearTimeout(slowTimerRef.current)
+        slowTimerRef.current = null
+      }
+      setShowSlowWarning(false)
     }
-    setSubmitted(true)
-    setInput('')
   }
 
   if (state.status === 'loading') {
@@ -128,15 +151,44 @@ export default function ParticipantPage() {
     )
   }
 
+  const charsLeft = CHAR_LIMIT - input.length
+  const nearLimit = charsLeft <= NEAR_LIMIT
+
   return (
     <div className="min-h-screen bg-lectern-sand flex items-center justify-center px-4">
       <div className="w-full max-w-lg">
         <h1 className="text-4xl font-bold text-lectern-slate mb-8 leading-tight">
           {state.activity.title}
         </h1>
-        {submitError && (
-          <p className="text-lectern-coral font-medium mb-4">{submitError}</p>
+
+        {showSlowWarning && (
+          <div className="flex items-start justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+            <p className="text-amber-700 text-sm">
+              Slow connection. Switching to your phone&apos;s data may help.
+            </p>
+            <button
+              onClick={() => setShowSlowWarning(false)}
+              className="text-amber-400 hover:text-amber-600 text-lg leading-none shrink-0"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
         )}
+
+        {submitError && (
+          <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <p className="text-lectern-coral font-medium text-sm">{submitError}</p>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="shrink-0 text-sm font-semibold text-lectern-coral border border-lectern-coral rounded-lg px-3 py-1 hover:bg-lectern-coral hover:text-white transition-colors disabled:opacity-40"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -145,12 +197,19 @@ export default function ParticipantPage() {
           }}
           placeholder="Type your response…"
           rows={5}
+          maxLength={CHAR_LIMIT}
           className="w-full border-2 border-lectern-slate/20 rounded-xl px-4 py-3 text-lectern-slate placeholder-lectern-slate/40 focus:outline-none focus:border-lectern-coral bg-white/70 resize-none text-lg"
         />
+        <div className="flex justify-end mt-1 mb-4">
+          <span className={`text-xs tabular-nums ${nearLimit ? 'text-lectern-coral font-medium' : 'text-lectern-slate/40'}`}>
+            {input.length}/{CHAR_LIMIT}
+          </span>
+        </div>
+
         <button
           onClick={handleSubmit}
-          disabled={submitting || !input.trim()}
-          className="mt-4 w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+          disabled={submitting || !input.trim() || input.length > CHAR_LIMIT}
+          className="w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {submitting ? 'Submitting…' : 'Submit'}
         </button>
