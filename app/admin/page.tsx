@@ -3,19 +3,39 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+type ActivityType = 'text' | 'rating' | 'wordcloud'
+
 type Activity = {
   id: string
   created_at: string
   title: string
   is_active: boolean
+  type: ActivityType
+  options: { choices: string[] } | null
 }
 
 type ActivityWithCount = Activity & { responseCount: number }
+
+const TYPE_BADGE: Record<ActivityType, { label: string; className: string }> = {
+  text:      { label: 'TEXT',      className: 'bg-lectern-slate/8 text-lectern-slate/60' },
+  rating:    { label: 'RATING',    className: 'bg-lectern-teal/10 text-lectern-sage' },
+  wordcloud: { label: 'WORDCLOUD', className: 'bg-lectern-sand/55 text-lectern-slate/60' },
+}
+
+function TypeBadge({ type }: { type: ActivityType }) {
+  const { label, className } = TYPE_BADGE[type] ?? TYPE_BADGE.text
+  return (
+    <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-semibold tracking-wide ${className}`}>
+      {label}
+    </span>
+  )
+}
 
 export default function AdminPage() {
   const [activities, setActivities] = useState<ActivityWithCount[]>([])
   const [loading, setLoading] = useState(true)
   const [newTitle, setNewTitle] = useState('')
+  const [newType, setNewType] = useState<ActivityType>('text')
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -79,9 +99,11 @@ export default function AdminPage() {
   }, [editingId])
 
   async function createActivity() {
-    if (!newTitle.trim() || creating) return
+    if (!newTitle.trim() || creating || newType === 'wordcloud') return
     setCreating(true)
-    await supabase.from('activities').insert({ title: newTitle.trim(), is_active: false })
+    const record: Record<string, unknown> = { title: newTitle.trim(), is_active: false, type: newType }
+    if (newType === 'rating') record.options = { choices: ['low', 'medium', 'high'] }
+    await supabase.from('activities').insert(record)
     setNewTitle('')
     setCreating(false)
   }
@@ -149,7 +171,7 @@ export default function AdminPage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-lectern-slate mb-6">Activity Admin</h1>
 
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-3 mb-1">
           <input
             type="text"
             value={newTitle}
@@ -158,9 +180,18 @@ export default function AdminPage() {
             placeholder="Enter activity prompt…"
             className="flex-1 border border-lectern-slate/20 rounded-lg px-3 py-2 text-lectern-slate placeholder-lectern-slate/40 focus:outline-none focus:ring-2 focus:ring-lectern-coral/50"
           />
+          <select
+            value={newType}
+            onChange={(e) => setNewType(e.target.value as ActivityType)}
+            className="border border-lectern-slate/20 rounded-lg px-3 py-2 text-lectern-slate bg-white focus:outline-none focus:ring-2 focus:ring-lectern-coral/50"
+          >
+            <option value="text">Text</option>
+            <option value="rating">Rating</option>
+            <option value="wordcloud">Word Cloud</option>
+          </select>
           <button
             onClick={createActivity}
-            disabled={creating || !newTitle.trim()}
+            disabled={creating || !newTitle.trim() || newType === 'wordcloud'}
             className="px-4 py-2 bg-lectern-slate text-white rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             {creating ? 'Creating…' : 'Create Activity'}
@@ -174,6 +205,10 @@ export default function AdminPage() {
             </button>
           )}
         </div>
+        {newType === 'wordcloud' && (
+          <p className="text-lectern-slate/50 text-sm mb-5">Word Cloud is coming soon.</p>
+        )}
+        {newType !== 'wordcloud' && <div className="mb-5" />}
 
         {activities.length === 0 ? (
           <p className="text-lectern-slate/40">No activities yet.</p>
@@ -196,6 +231,7 @@ export default function AdminPage() {
                   >
                     <td className="px-4 py-3 max-w-xs">
                       <div className="flex items-center gap-2">
+                        <TypeBadge type={activity.type ?? 'text'} />
                         {activity.is_active && (
                           <span className="shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-lectern-coral text-white">
                             <span className="w-1.5 h-1.5 rounded-full bg-white animate-live-pulse" />

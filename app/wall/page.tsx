@@ -8,6 +8,8 @@ type Activity = {
   id: string
   title: string
   is_active: boolean
+  type: 'text' | 'rating' | 'wordcloud'
+  options: { choices: string[] } | null
 }
 
 type Response = {
@@ -15,6 +17,47 @@ type Response = {
   created_at: string
   activity_id: string
   content: string
+}
+
+const BAR_COLORS = ['#a8e8f9', '#ffd35b', '#ffba42']
+
+function RatingBars({
+  choices,
+  responses,
+}: {
+  choices: string[]
+  responses: { content: string }[]
+}) {
+  const counts: Record<string, number> = Object.fromEntries(choices.map((c) => [c, 0]))
+  for (const r of responses) {
+    if (r.content in counts) counts[r.content]++
+  }
+  const total = Object.values(counts).reduce((s, n) => s + n, 0)
+
+  return (
+    <div className="space-y-6">
+      {choices.map((choice, i) => {
+        const count = counts[choice] ?? 0
+        const pct = total > 0 ? (count / total) * 100 : 0
+        return (
+          <div key={choice}>
+            <div className="flex justify-between items-baseline mb-2">
+              <span className="text-xl font-bold text-lectern-slate capitalize">{choice}</span>
+              <span className="text-lectern-slate/50 tabular-nums text-base">
+                {count} &middot; {Math.round(pct)}%
+              </span>
+            </div>
+            <div className="h-10 bg-lectern-slate/5 rounded-xl overflow-hidden">
+              <div
+                className="h-full rounded-xl transition-all duration-500 ease-out"
+                style={{ width: `${pct}%`, backgroundColor: BAR_COLORS[i % BAR_COLORS.length] }}
+              />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 const NOTE_BG = [
@@ -162,7 +205,12 @@ export default function WallPage() {
           {responses.length} {responses.length === 1 ? 'response' : 'responses'}
         </p>
 
-        {responses.length === 0 ? (
+        {lastActivity.type === 'rating' ? (
+          <RatingBars
+            choices={lastActivity.options?.choices ?? ['low', 'medium', 'high']}
+            responses={responses}
+          />
+        ) : responses.length === 0 ? (
           <p className="text-lectern-slate/35 text-center py-16 text-lg">No responses yet.</p>
         ) : (
           <div className="columns-1 sm:columns-2 gap-4">

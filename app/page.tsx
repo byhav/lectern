@@ -8,6 +8,8 @@ type Activity = {
   id: string
   title: string
   is_active: boolean
+  type: 'text' | 'rating' | 'wordcloud'
+  options: { choices: string[] } | null
 }
 
 type PageState =
@@ -62,6 +64,27 @@ export default function ParticipantPage() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  async function handleRatingSubmit(choice: string) {
+    if (state.status !== 'active') return
+    if (Date.now() - lastSubmitRef.current < 2000) return
+    lastSubmitRef.current = Date.now()
+
+    setSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const { error } = await supabase
+        .from('responses')
+        .insert({ activity_id: state.activity.id, content: choice })
+      if (error) throw error
+      setSubmitted(true)
+    } catch {
+      setSubmitError('Submission failed. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   async function handleSubmit() {
     if (state.status !== 'active' || !input.trim() || input.length > CHAR_LIMIT) return
@@ -143,13 +166,19 @@ export default function ParticipantPage() {
               href="/wall"
               className="w-full py-4 border-2 border-lectern-sage text-lectern-sage font-semibold rounded-xl text-lg text-center hover:bg-lectern-sage/10 transition-colors"
             >
-              View the wall →
+              {state.status === 'active' && state.activity.type === 'rating'
+                ? 'View results →'
+                : 'View the wall →'}
             </Link>
           </div>
         </div>
       </div>
     )
   }
+
+  const isRating = state.activity.type === 'rating'
+  const choices = state.activity.options?.choices ?? ['low', 'medium', 'high']
+  const CHOICE_COLORS = ['bg-lectern-teal', 'bg-lectern-sand', 'bg-lectern-coral']
 
   const charsLeft = CHAR_LIMIT - input.length
   const nearLimit = charsLeft <= NEAR_LIMIT
@@ -161,7 +190,7 @@ export default function ParticipantPage() {
           {state.activity.title}
         </h1>
 
-        {showSlowWarning && (
+        {!isRating && showSlowWarning && (
           <div className="flex items-start justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
             <p className="text-amber-700 text-sm">
               Slow connection. Switching to your phone&apos;s data may help.
@@ -179,46 +208,70 @@ export default function ParticipantPage() {
         {submitError && (
           <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
             <p className="text-lectern-coral font-medium text-sm">{submitError}</p>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="shrink-0 text-sm font-semibold text-lectern-coral border border-lectern-coral rounded-lg px-3 py-1 hover:bg-lectern-coral hover:text-white transition-colors disabled:opacity-40"
-            >
-              Retry
-            </button>
+            {!isRating && (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="shrink-0 text-sm font-semibold text-lectern-coral border border-lectern-coral rounded-lg px-3 py-1 hover:bg-lectern-coral hover:text-white transition-colors disabled:opacity-40"
+              >
+                Retry
+              </button>
+            )}
           </div>
         )}
 
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
-          }}
-          placeholder="Type your response…"
-          rows={5}
-          maxLength={CHAR_LIMIT}
-          className="w-full border-2 border-lectern-slate/20 rounded-xl px-4 py-3 text-lectern-slate placeholder-lectern-slate/40 focus:outline-none focus:border-lectern-coral bg-white/70 resize-none text-lg"
-        />
-        <div className="flex justify-end mt-1 mb-4">
-          <span className={`text-xs tabular-nums ${nearLimit ? 'text-lectern-coral font-medium' : 'text-lectern-slate/40'}`}>
-            {input.length}/{CHAR_LIMIT}
-          </span>
-        </div>
-
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || !input.trim() || input.length > CHAR_LIMIT}
-          className="w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-        >
-          {submitting ? 'Submitting…' : 'Submit'}
-        </button>
-        <Link
-          href="/wall"
-          className="mt-5 block text-center text-lectern-slate/50 hover:text-lectern-slate transition-colors text-sm"
-        >
-          View the wall →
-        </Link>
+        {isRating ? (
+          <div className="flex flex-col gap-4">
+            {choices.map((choice, i) => (
+              <button
+                key={choice}
+                onClick={() => handleRatingSubmit(choice)}
+                disabled={submitting}
+                className={`w-full py-5 ${CHOICE_COLORS[i % CHOICE_COLORS.length]} text-lectern-slate font-bold rounded-xl text-2xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity capitalize`}
+              >
+                {choice}
+              </button>
+            ))}
+            <Link
+              href="/wall"
+              className="mt-2 block text-center text-lectern-slate/50 hover:text-lectern-slate transition-colors text-sm"
+            >
+              View results →
+            </Link>
+          </div>
+        ) : (
+          <>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
+              }}
+              placeholder="Type your response…"
+              rows={5}
+              maxLength={CHAR_LIMIT}
+              className="w-full border-2 border-lectern-slate/20 rounded-xl px-4 py-3 text-lectern-slate placeholder-lectern-slate/40 focus:outline-none focus:border-lectern-coral bg-white/70 resize-none text-lg"
+            />
+            <div className="flex justify-end mt-1 mb-4">
+              <span className={`text-xs tabular-nums ${nearLimit ? 'text-lectern-coral font-medium' : 'text-lectern-slate/40'}`}>
+                {input.length}/{CHAR_LIMIT}
+              </span>
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !input.trim() || input.length > CHAR_LIMIT}
+              className="w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+            >
+              {submitting ? 'Submitting…' : 'Submit'}
+            </button>
+            <Link
+              href="/wall"
+              className="mt-5 block text-center text-lectern-slate/50 hover:text-lectern-slate transition-colors text-sm"
+            >
+              View the wall →
+            </Link>
+          </>
+        )}
       </div>
     </div>
   )
