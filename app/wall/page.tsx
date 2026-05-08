@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { WordCloud } from '@/app/presenter/WordCloud'
 
 type Activity = {
   id: string
@@ -200,32 +201,43 @@ export default function WallPage() {
         </div>
       </header>
 
-      <main className="px-4 py-5">
-        <p className="text-lectern-slate/50 text-sm mb-4 tabular-nums">
-          {responses.length} {responses.length === 1 ? 'response' : 'responses'}
-        </p>
-
-        {lastActivity.type === 'rating' ? (
-          <RatingBars
-            choices={lastActivity.options?.choices ?? ['low', 'medium', 'high']}
-            responses={responses}
-          />
-        ) : responses.length === 0 ? (
-          <p className="text-lectern-slate/35 text-center py-16 text-lg">No responses yet.</p>
-        ) : (
-          <div className="columns-1 sm:columns-2 gap-4">
-            {responses.map((response, i) => (
-              <div
-                key={response.id}
-                style={{ backgroundColor: noteBg(i) }}
-                className="rounded-xl p-3 mb-3 break-inside-avoid shadow-sm"
-              >
-                <p className="text-lectern-slate text-base leading-snug">{response.content}</p>
-              </div>
-            ))}
+      {lastActivity.type === 'wordcloud' ? (
+        <div className="flex flex-col" style={{ height: 'calc(100dvh - 56px)' }}>
+          <p className="px-4 pt-3 pb-1 text-lectern-slate/50 text-sm tabular-nums shrink-0">
+            {responses.length} {responses.length === 1 ? 'response' : 'responses'}
+          </p>
+          <div className="flex-1 min-h-0">
+            <WordCloud responses={responses} minFont={12} maxFont={40} />
           </div>
-        )}
-      </main>
+        </div>
+      ) : (
+        <main className="px-4 py-5">
+          <p className="text-lectern-slate/50 text-sm mb-4 tabular-nums">
+            {responses.length} {responses.length === 1 ? 'response' : 'responses'}
+          </p>
+
+          {lastActivity.type === 'rating' ? (
+            <RatingBars
+              choices={lastActivity.options?.choices ?? ['low', 'medium', 'high']}
+              responses={responses}
+            />
+          ) : responses.length === 0 ? (
+            <p className="text-lectern-slate/35 text-center py-16 text-lg">No responses yet.</p>
+          ) : (
+            <div className="columns-1 sm:columns-2 gap-4">
+              {responses.map((response, i) => (
+                <div
+                  key={response.id}
+                  style={{ backgroundColor: noteBg(i) }}
+                  className="rounded-xl p-3 mb-3 break-inside-avoid shadow-sm"
+                >
+                  <p className="text-lectern-slate text-base leading-snug">{response.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+      )}
     </div>
   )
 }

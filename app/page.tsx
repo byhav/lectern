@@ -20,6 +20,7 @@ type PageState =
 
 const CHAR_LIMIT = 500
 const NEAR_LIMIT = 50
+const WORDCLOUD_CHAR_LIMIT = 50
 
 export default function ParticipantPage() {
   const [state, setState] = useState<PageState>({ status: 'loading' })
@@ -56,6 +57,8 @@ export default function ParticipantPage() {
         () => {
           fetchActiveActivity()
           setSubmitted(false)
+          setInput('')
+          setSubmitError(null)
         }
       )
       .subscribe()
@@ -79,6 +82,28 @@ export default function ParticipantPage() {
         .insert({ activity_id: state.activity.id, content: choice })
       if (error) throw error
       setSubmitted(true)
+    } catch {
+      setSubmitError('Submission failed. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleWordcloudSubmit() {
+    if (state.status !== 'active' || !input.trim() || input.length > WORDCLOUD_CHAR_LIMIT) return
+    if (Date.now() - lastSubmitRef.current < 2000) return
+    lastSubmitRef.current = Date.now()
+
+    setSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const { error } = await supabase
+        .from('responses')
+        .insert({ activity_id: state.activity.id, content: input.trim() })
+      if (error) throw error
+      setSubmitted(true)
+      setInput('')
     } catch {
       setSubmitError('Submission failed. Please try again.')
     } finally {
@@ -147,28 +172,32 @@ export default function ParticipantPage() {
   }
 
   if (submitted) {
+    const isWordcloudSubmit = state.status === 'active' && state.activity.type === 'wordcloud'
+    const isRatingSubmit = state.status === 'active' && state.activity.type === 'rating'
     return (
       <div className="min-h-screen bg-lectern-sand flex items-center justify-center px-4">
         <div className="text-center max-w-sm w-full">
           <div className="w-20 h-20 rounded-full bg-lectern-teal flex items-center justify-center mx-auto mb-6">
             <span className="text-white text-3xl font-bold">✓</span>
           </div>
-          <h2 className="text-3xl font-bold text-lectern-slate mb-2">Response received</h2>
-          <p className="text-lectern-slate/60 mb-8 text-lg">Thanks for contributing.</p>
+          <h2 className="text-3xl font-bold text-lectern-slate mb-2">
+            {isWordcloudSubmit ? 'Got it.' : 'Response received'}
+          </h2>
+          <p className="text-lectern-slate/60 mb-8 text-lg">
+            {isWordcloudSubmit ? 'Add another word to the cloud.' : 'Thanks for contributing.'}
+          </p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => setSubmitted(false)}
               className="w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-lg hover:opacity-90 transition-opacity"
             >
-              Submit another response
+              {isWordcloudSubmit ? 'Add another word' : 'Submit another response'}
             </button>
             <Link
               href="/wall"
               className="w-full py-4 border-2 border-lectern-sage text-lectern-sage font-semibold rounded-xl text-lg text-center hover:bg-lectern-sage/10 transition-colors"
             >
-              {state.status === 'active' && state.activity.type === 'rating'
-                ? 'View results →'
-                : 'View the wall →'}
+              {isRatingSubmit ? 'View results →' : isWordcloudSubmit ? 'View the word cloud →' : 'View the wall →'}
             </Link>
           </div>
         </div>
@@ -177,11 +206,13 @@ export default function ParticipantPage() {
   }
 
   const isRating = state.activity.type === 'rating'
+  const isWordcloud = state.activity.type === 'wordcloud'
   const choices = state.activity.options?.choices ?? ['low', 'medium', 'high']
   const CHOICE_COLORS = ['bg-lectern-teal', 'bg-lectern-sand', 'bg-lectern-coral']
 
   const charsLeft = CHAR_LIMIT - input.length
   const nearLimit = charsLeft <= NEAR_LIMIT
+  const wordCount = input.trim() ? input.trim().split(/\s+/).length : 0
 
   return (
     <div className="min-h-screen bg-lectern-sand flex items-center justify-center px-4">
@@ -190,7 +221,7 @@ export default function ParticipantPage() {
           {state.activity.title}
         </h1>
 
-        {!isRating && showSlowWarning && (
+        {!isRating && !isWordcloud && showSlowWarning && (
           <div className="flex items-start justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
             <p className="text-amber-700 text-sm">
               Slow connection. Switching to your phone&apos;s data may help.
@@ -210,7 +241,7 @@ export default function ParticipantPage() {
             <p className="text-lectern-coral font-medium text-sm">{submitError}</p>
             {!isRating && (
               <button
-                onClick={handleSubmit}
+                onClick={isWordcloud ? handleWordcloudSubmit : handleSubmit}
                 disabled={submitting}
                 className="shrink-0 text-sm font-semibold text-lectern-coral border border-lectern-coral rounded-lg px-3 py-1 hover:bg-lectern-coral hover:text-white transition-colors disabled:opacity-40"
               >
@@ -239,6 +270,40 @@ export default function ParticipantPage() {
               View results →
             </Link>
           </div>
+        ) : isWordcloud ? (
+          <>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleWordcloudSubmit() }}
+              placeholder="One word or short phrase…"
+              maxLength={WORDCLOUD_CHAR_LIMIT}
+              autoComplete="off"
+              className="w-full border-2 border-lectern-slate/20 rounded-xl px-4 py-3 text-lectern-slate placeholder-lectern-slate/40 focus:outline-none focus:border-lectern-coral bg-white/70 text-lg"
+            />
+            <div className="flex items-start justify-between mt-1 mb-4 min-h-[1.25rem]">
+              <span className="text-xs text-amber-600">
+                {wordCount > 3 ? 'Tip: shorter responses make better word clouds.' : ''}
+              </span>
+              <span className="text-xs text-lectern-slate/40 tabular-nums shrink-0">
+                {input.trim() ? `${wordCount} ${wordCount === 1 ? 'word' : 'words'}` : ''}
+              </span>
+            </div>
+            <button
+              onClick={handleWordcloudSubmit}
+              disabled={submitting || !input.trim()}
+              className="w-full py-4 bg-lectern-coral text-white font-bold rounded-xl text-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+            >
+              {submitting ? 'Submitting…' : 'Submit'}
+            </button>
+            <Link
+              href="/wall"
+              className="mt-5 block text-center text-lectern-slate/50 hover:text-lectern-slate transition-colors text-sm"
+            >
+              View the wall →
+            </Link>
+          </>
         ) : (
           <>
             <textarea

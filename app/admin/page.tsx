@@ -99,7 +99,7 @@ export default function AdminPage() {
   }, [editingId])
 
   async function createActivity() {
-    if (!newTitle.trim() || creating || newType === 'wordcloud') return
+    if (!newTitle.trim() || creating) return
     setCreating(true)
     const record: Record<string, unknown> = { title: newTitle.trim(), is_active: false, type: newType }
     if (newType === 'rating') record.options = { choices: ['low', 'medium', 'high'] }
@@ -191,7 +191,7 @@ export default function AdminPage() {
           </select>
           <button
             onClick={createActivity}
-            disabled={creating || !newTitle.trim() || newType === 'wordcloud'}
+            disabled={creating || !newTitle.trim()}
             className="px-4 py-2 bg-lectern-slate text-white rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             {creating ? 'Creating…' : 'Create Activity'}
@@ -205,10 +205,7 @@ export default function AdminPage() {
             </button>
           )}
         </div>
-        {newType === 'wordcloud' && (
-          <p className="text-lectern-slate/50 text-sm mb-5">Word Cloud is coming soon.</p>
-        )}
-        {newType !== 'wordcloud' && <div className="mb-5" />}
+        <div className="mb-5" />
 
         {activities.length === 0 ? (
           <p className="text-lectern-slate/40">No activities yet.</p>

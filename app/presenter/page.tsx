@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '@/lib/supabase'
+import { WordCloud } from './WordCloud'
 
 type Activity = {
   id: string
@@ -164,6 +165,8 @@ export default function PresenterPage() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'activities' },
         async () => {
+          setResponses([])
+          seenIds.current.clear()
           const act = await fetchActiveActivity()
           if (act) await fetchResponses(act.id)
         }
@@ -214,8 +217,10 @@ export default function PresenterPage() {
     )
   }
 
+  const isWordcloud = activity?.type === 'wordcloud'
+
   return (
-    <div className="min-h-screen bg-white p-10 pb-40">
+    <div className={isWordcloud ? 'h-screen bg-white flex flex-col p-10' : 'min-h-screen bg-white p-10 pb-40'}>
       {participantUrl && (
         <div className="fixed bottom-6 right-6 bg-white rounded-2xl shadow-xl p-5 flex flex-col items-center gap-3 border border-lectern-slate/10">
           <QRCodeSVG value={participantUrl} size={220} level="M" />
@@ -225,8 +230,8 @@ export default function PresenterPage() {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-10">
+      <div className={isWordcloud ? 'max-w-5xl mx-auto w-full flex flex-col flex-1 min-h-0' : 'max-w-5xl mx-auto'}>
+        <div className="mb-6 shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <span className="w-3 h-3 rounded-full bg-lectern-coral animate-live-pulse shrink-0" />
             <span className="text-lectern-teal font-semibold text-xl tabular-nums">
@@ -254,6 +259,10 @@ export default function PresenterPage() {
             choices={activity.options?.choices ?? ['low', 'medium', 'high']}
             responses={responses}
           />
+        ) : activity?.type === 'wordcloud' ? (
+          <div className="flex-1 min-h-0">
+            <WordCloud responses={responses} />
+          </div>
         ) : responses.length === 0 ? (
           <p className="text-lectern-slate/25 text-center py-20 text-2xl">No responses yet.</p>
         ) : (
