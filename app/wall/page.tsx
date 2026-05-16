@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { WordCloud } from '@/app/presenter/WordCloud'
+import { SequenceCards } from '@/app/presenter/SequenceCards'
 
 type Activity = {
   id: string
   title: string
   is_active: boolean
-  type: 'text' | 'rating' | 'wordcloud'
-  options: { choices: string[] } | null
+  type: 'text' | 'rating' | 'wordcloud' | 'sequence'
+  options: { choices: string[] } | { prompts: [string, string, string] } | null
 }
 
 type Response = {
@@ -18,6 +19,7 @@ type Response = {
   created_at: string
   activity_id: string
   content: string
+  participant_id: string | null
 }
 
 const BAR_COLORS = ['#a8e8f9', '#ffd35b', '#ffba42']
@@ -77,9 +79,21 @@ export default function WallPage() {
   const [isLive, setIsLive] = useState(false)
   const [responses, setResponses] = useState<Response[]>([])
   const [loading, setLoading] = useState(true)
+  const [animatingIds, setAnimatingIds] = useState(new Set<string>())
   // Stable ref so the INSERT closure always has the current activity id
   const lastActivityIdRef = useRef<string | null>(null)
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function addAnimating(ids: string[]) {
+    setAnimatingIds((prev) => new Set([...prev, ...ids]))
+    setTimeout(() => {
+      setAnimatingIds((prev) => {
+        const next = new Set(prev)
+        ids.forEach((id) => next.delete(id))
+        return next
+      })
+    }, 500)
+  }
 
   async function fetchResponses(activityId: string) {
     const { data } = await supabase
@@ -132,6 +146,7 @@ export default function WallPage() {
           const r = payload.new as Response
           if (r.activity_id === lastActivityIdRef.current) {
             setResponses((prev) => [r, ...prev])
+            addAnimating([r.id])
           }
         }
       )
@@ -177,6 +192,11 @@ export default function WallPage() {
     )
   }
 
+  const isSequence = lastActivity.type === 'sequence'
+  const participantCount = isSequence
+    ? new Set(responses.flatMap(r => r.participant_id ? [r.participant_id] : [])).size
+    : 0
+
   return (
     <div className="min-h-screen bg-white">
       <header className="sticky top-0 bg-lectern-sand border-b border-lectern-slate/10 px-4 py-3 flex items-center gap-3">
@@ -213,14 +233,19 @@ export default function WallPage() {
       ) : (
         <main className="px-4 py-5">
           <p className="text-lectern-slate/50 text-sm mb-4 tabular-nums">
-            {responses.length} {responses.length === 1 ? 'response' : 'responses'}
+            {isSequence
+              ? `${participantCount} ${participantCount === 1 ? 'participant' : 'participants'}`
+              : `${responses.length} ${responses.length === 1 ? 'response' : 'responses'}`
+            }
           </p>
 
           {lastActivity.type === 'rating' ? (
             <RatingBars
-              choices={lastActivity.options?.choices ?? ['low', 'medium', 'high']}
+              choices={(lastActivity.options as { choices?: string[] })?.choices ?? ['low', 'medium', 'high']}
               responses={responses}
             />
+          ) : lastActivity.type === 'sequence' ? (
+            <SequenceCards responses={responses} animatingIds={animatingIds} variant="wall" />
           ) : responses.length === 0 ? (
             <p className="text-lectern-slate/35 text-center py-16 text-lg">No responses yet.</p>
           ) : (

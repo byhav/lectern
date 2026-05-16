@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '@/lib/supabase'
 import { WordCloud } from './WordCloud'
+import { SequenceCards } from './SequenceCards'
 
 type Activity = {
   id: string
   title: string
   is_active: boolean
-  type: 'text' | 'rating' | 'wordcloud'
-  options: { choices: string[] } | null
+  type: 'text' | 'rating' | 'wordcloud' | 'sequence'
+  options: { choices: string[] } | { prompts: [string, string, string] } | null
 }
 
 type Response = {
@@ -18,6 +19,7 @@ type Response = {
   created_at: string
   activity_id: string
   content: string
+  participant_id: string | null
 }
 
 const BAR_COLORS = ['#a8e8f9', '#ffd35b', '#ffba42']
@@ -230,12 +232,18 @@ export default function PresenterPage() {
         </div>
       )}
 
-      <div className={isWordcloud ? 'max-w-5xl mx-auto w-full flex flex-col flex-1 min-h-0' : 'max-w-5xl mx-auto'}>
-        <div className="mb-6 shrink-0">
+      <div className={isWordcloud ? 'w-full flex flex-col flex-1 min-h-0' : 'max-w-5xl mx-auto'}>
+        <div className={isWordcloud ? 'max-w-5xl mx-auto w-full mb-6 shrink-0' : 'mb-6 shrink-0'}>
           <div className="flex items-center gap-3 mb-3">
             <span className="w-3 h-3 rounded-full bg-lectern-coral animate-live-pulse shrink-0" />
             <span className="text-lectern-teal font-semibold text-xl tabular-nums">
-              {responses.length} {responses.length === 1 ? 'response' : 'responses'}
+              {activity?.type === 'sequence'
+                ? (() => {
+                    const pc = new Set(responses.flatMap(r => r.participant_id ? [r.participant_id] : [])).size
+                    return `${pc} ${pc === 1 ? 'participant' : 'participants'}`
+                  })()
+                : `${responses.length} ${responses.length === 1 ? 'response' : 'responses'}`
+              }
             </span>
             {connectionMode === 'realtime' ? (
               <span className="text-xs font-medium text-emerald-500">● realtime</span>
@@ -256,9 +264,11 @@ export default function PresenterPage() {
 
         {activity?.type === 'rating' ? (
           <RatingBars
-            choices={activity.options?.choices ?? ['low', 'medium', 'high']}
+            choices={(activity.options as { choices?: string[] })?.choices ?? ['low', 'medium', 'high']}
             responses={responses}
           />
+        ) : activity?.type === 'sequence' ? (
+          <SequenceCards responses={responses} animatingIds={animatingIds} variant="presenter" />
         ) : activity?.type === 'wordcloud' ? (
           <div className="flex-1 min-h-0">
             <WordCloud responses={responses} />

@@ -106,7 +106,8 @@ function computeFontSize(
   maxFont: number,
 ): number {
   if (maxCount === minCount) return Math.round((minFont + maxFont) / 2)
-  return Math.round(minFont + ((count - minCount) / (maxCount - minCount)) * (maxFont - minFont))
+  const t = (count - minCount) / (maxCount - minCount)
+  return Math.round(minFont + Math.pow(t, 0.7) * (maxFont - minFont))
 }
 
 function computeFontWeight(count: number, maxCount: number): number {
@@ -123,7 +124,7 @@ function wordColor(rank: number, total: number): string {
 export function WordCloud({
   responses,
   minFont = 14,
-  maxFont = 80,
+  maxFont = 100,
 }: {
   responses: Response[]
   minFont?: number
@@ -218,7 +219,8 @@ export function WordCloud({
         return c >= localMax * 0.66 ? 600 : 400
       })
       .rotate((d) => (phraseHash((d as typeof words[0]).text ?? '') % 2 === 0 ? 0 : 90))
-      .padding(6)
+      .padding(8)
+      .spiral('rectangular')
       .random(seededRng(42))
       .on('end', (laid) => {
         if (!mountedRef.current) return
